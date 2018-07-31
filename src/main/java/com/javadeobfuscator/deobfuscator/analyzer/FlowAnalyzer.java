@@ -30,9 +30,11 @@ public class FlowAnalyzer
 	public Result analyze()
 	{
 		LinkedHashMap<LabelNode, Entry<List<AbstractInsnNode>, List<Triple<LabelNode, JumpData, Integer>>>> labels = new LinkedHashMap<>();
+		LinkedHashMap<LabelNode, List<TryCatchBlockNode>> trycatchMap = new LinkedHashMap<>();
 		LabelNode currentLabel = null;
 		boolean hit = false;
-		labels.putIfAbsent(ABSENT, new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>()));		
+		labels.putIfAbsent(ABSENT, new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>()));
+		List<TryCatchBlockNode> trycatchNow = new ArrayList<>();
 		for(AbstractInsnNode ain : method.instructions.toArray())
 		{
 			if(ain.getOpcode() == Opcodes.RET || ain.getOpcode() == Opcodes.JSR)
@@ -47,10 +49,19 @@ public class FlowAnalyzer
 				hit = false;
 				currentLabel = (LabelNode)ain;
 				labels.putIfAbsent(currentLabel, new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>()));
+				for(TryCatchBlockNode tcbn : method.tryCatchBlocks)
+				{
+					if(tcbn.start == currentLabel)
+						trycatchNow.add(tcbn);
+					if(tcbn.end == currentLabel)
+						trycatchNow.remove(tcbn);
+				}
+				if(currentLabel != null)
+					trycatchMap.put(currentLabel, new ArrayList<>(trycatchNow));
 				continue;
 			}
 			if(ain.getOpcode() == Opcodes.GOTO || ain.getOpcode() == Opcodes.TABLESWITCH || ain.getOpcode() == Opcodes.LOOKUPSWITCH
-				|| (ain.getOpcode() >= Opcodes.IRETURN && ain.getOpcode() <= Opcodes.RETURN))
+				|| (ain.getOpcode() >= Opcodes.IRETURN && ain.getOpcode() <= Opcodes.RETURN) || ain.getOpcode() == Opcodes.ATHROW)
 				hit = true;
 			if(currentLabel == null)
 				labels.get(ABSENT).getKey().add(ain);
@@ -80,14 +91,15 @@ public class FlowAnalyzer
 					}
 					entry.getValue().getValue().add(Triple.of(dflt, new JumpData(JumpCause.SWITCH, ain), i));
 					continue loop;
-				}else if(ain.getOpcode() >= Opcodes.IRETURN && ain.getOpcode() <= Opcodes.RETURN)
+				}else if((ain.getOpcode() >= Opcodes.IRETURN && ain.getOpcode() <= Opcodes.RETURN) 
+					|| ain.getOpcode() == Opcodes.ATHROW)
 					continue loop;
 		for(Entry<LabelNode, Entry<List<AbstractInsnNode>, List<Triple<LabelNode, JumpData, Integer>>>> entry : labels.entrySet())
 		{
 			if(!entry.getValue().getValue().isEmpty() && entry.getValue().getValue().get(0).getMiddle().cause == JumpCause.NEXT)
 				entry.getValue().getValue().add(entry.getValue().getValue().remove(0));
 		}
-		return new Result(labels);
+		return new Result(labels, trycatchMap);
 	}
 	
 	/**
@@ -96,7 +108,8 @@ public class FlowAnalyzer
 	 * @param breaks
 	 * @return
 	 */
-	public LinkedHashMap<LabelNode, List<AbstractInsnNode>> analyze(AbstractInsnNode start, List<AbstractInsnNode> breaks)
+	public LinkedHashMap<LabelNode, List<AbstractInsnNode>> analyze(AbstractInsnNode start, List<AbstractInsnNode> breaks, 
+		Map<AbstractInsnNode, List<LabelNode>> switchBreaks, boolean includeBreaks, boolean includeTryCatch)
 	{
 		LabelNode currentLabel = ABSENT;
 		AbstractInsnNode prev = start;
@@ -120,33 +133,45 @@ public class FlowAnalyzer
 				lbl = (LabelNode)ain;
 				//Note: Empty try-catches are not added
 				for(TryCatchBlockNode tc : method.tryCatchBlocks)
+				{
 					if(tc.start == lbl)
 						trycatchNow.add(tc);
-				for(TryCatchBlockNode tc : method.tryCatchBlocks)
 					if(tc.end == lbl)
 						trycatchNow.remove(tc);
+				}
 				trycatchMap.put(lbl, new ArrayList<>(trycatchNow));
 			}
 		LinkedHashMap<LabelNode, List<AbstractInsnNode>> result = new LinkedHashMap<>();
 		//Recursive iteration through next
-		analyze0(trycatchMap, result, currentLabel, start, breaks);
+		analyze0(trycatchMap, result, currentLabel, start, breaks, switchBreaks, includeBreaks, includeTryCatch);
 		return result;
 	}
 	
 	public void analyze0(LinkedHashMap<LabelNode, List<TryCatchBlockNode>> trycatchMap,
 		LinkedHashMap<LabelNode, List<AbstractInsnNode>> result, 
-		LabelNode currentLabel, AbstractInsnNode start, List<AbstractInsnNode> breaks)
+		LabelNode currentLabel, AbstractInsnNode start, List<AbstractInsnNode> breaks, Map<AbstractInsnNode, List<LabelNode>> switchBreaks,
+		boolean includeBreaks, boolean includeTryCatch)
 	{
-		if(start != currentLabel)
+		if(start != currentLabel && !breaks.contains(start))
 		{
 			result.put(currentLabel, new ArrayList<>());
-			for(TryCatchBlockNode trycatch : trycatchMap.get(currentLabel))
-				analyze0(trycatchMap, result, trycatch.handler, trycatch.handler, breaks);
+			if(includeTryCatch)
+				for(TryCatchBlockNode trycatch : trycatchMap.get(currentLabel))
+					analyze0(trycatchMap, result, trycatch.handler, trycatch.handler, breaks, switchBreaks, includeBreaks, includeTryCatch);
 		}
 		while(start != null)
 		{
 			if(breaks.contains(start))
+			{
+				if(start instanceof LabelNode && includeBreaks)
+					result.putIfAbsent((LabelNode)start, new ArrayList<>());
+				else if(includeBreaks)
+				{
+					result.putIfAbsent(currentLabel, new ArrayList<>());
+					result.get(currentLabel).add(start);
+				}
 				return;
+			}
 			if(start instanceof LabelNode)
 			{
 				if(result.containsKey(start))
@@ -154,18 +179,22 @@ public class FlowAnalyzer
 				currentLabel = (LabelNode)start;
 				result.put(currentLabel, new ArrayList<>());
 				//Try-catch
-				for(TryCatchBlockNode trycatch : trycatchMap.get(currentLabel))
-					analyze0(trycatchMap, result, trycatch.handler, trycatch.handler, breaks);
+				if(includeTryCatch)
+					for(TryCatchBlockNode trycatch : trycatchMap.get(currentLabel))
+						analyze0(trycatchMap, result, trycatch.handler, trycatch.handler, breaks, switchBreaks, includeBreaks, 
+							includeTryCatch);
 				start = start.getNext();
 				continue;
 			}
 			result.get(currentLabel).add(start);
 			if(start.getOpcode() == Opcodes.GOTO)
 			{
-				analyze0(trycatchMap, result, ((JumpInsnNode)start).label, ((JumpInsnNode)start).label, breaks);
+				analyze0(trycatchMap, result, ((JumpInsnNode)start).label, ((JumpInsnNode)start).label, breaks, switchBreaks, 
+					includeBreaks, includeTryCatch);
 				return;
 			}else if(start instanceof JumpInsnNode)
-				analyze0(trycatchMap, result, ((JumpInsnNode)start).label, ((JumpInsnNode)start).label, breaks);
+				analyze0(trycatchMap, result, ((JumpInsnNode)start).label, ((JumpInsnNode)start).label, breaks, switchBreaks, 
+					includeBreaks, includeTryCatch);
 			else if(start instanceof TableSwitchInsnNode || start instanceof LookupSwitchInsnNode)
 			{
 				List<LabelNode> jumps = start instanceof TableSwitchInsnNode ? ((TableSwitchInsnNode)start).labels : 
@@ -173,10 +202,13 @@ public class FlowAnalyzer
 				LabelNode dflt = start instanceof TableSwitchInsnNode ? ((TableSwitchInsnNode)start).dflt : 
 					((LookupSwitchInsnNode)start).dflt;
 				for(LabelNode lbl : jumps)
-					analyze0(trycatchMap, result, lbl, lbl, breaks);
-				analyze0(trycatchMap, result, dflt, dflt, breaks);
+					if(!switchBreaks.containsKey(start) || switchBreaks.get(start) != lbl)
+						analyze0(trycatchMap, result, lbl, lbl, breaks, switchBreaks, includeBreaks, includeTryCatch);
+				if(!switchBreaks.containsKey(start) || switchBreaks.get(start) != dflt)
+					analyze0(trycatchMap, result, dflt, dflt, breaks, switchBreaks, includeBreaks, includeTryCatch);
 				return;
-			}else if(start.getOpcode() >= Opcodes.IRETURN && start.getOpcode() <= Opcodes.RETURN)
+			}else if((start.getOpcode() >= Opcodes.IRETURN && start.getOpcode() <= Opcodes.RETURN) 
+				|| start.getOpcode() == Opcodes.ATHROW)
 				return;
 			start = start.getNext();
 		}
@@ -205,10 +237,13 @@ public class FlowAnalyzer
 	public static class Result
 	{
 		public final LinkedHashMap<LabelNode, Entry<List<AbstractInsnNode>, List<Triple<LabelNode, JumpData, Integer>>>> labels;
+		public final LinkedHashMap<LabelNode, List<TryCatchBlockNode>> trycatchMap;
 		
-		public Result(LinkedHashMap<LabelNode, Entry<List<AbstractInsnNode>, List<Triple<LabelNode, JumpData, Integer>>>> labels)
+		public Result(LinkedHashMap<LabelNode, Entry<List<AbstractInsnNode>, List<Triple<LabelNode, JumpData, Integer>>>> labels,
+			LinkedHashMap<LabelNode, List<TryCatchBlockNode>> trycatchMap)
 		{
 			this.labels = labels;
+			this.trycatchMap = trycatchMap;
 		}
 	}
 }
