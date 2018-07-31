@@ -88,10 +88,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
                             Optional<Object> consensus = SourceFinder.findSource(method, frames, instructions, new ConstantPropagatingSourceFinder(), 
                             	m, currentFrame.getStack(stackOffset)).consensus();
                             if(!consensus.isPresent())
-                            {
-                            	System.out.println(method.name);
                             	continue insns;
-                            }
 
                             Object o = consensus.get();
                             if(o instanceof Integer)
