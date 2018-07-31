@@ -2301,9 +2301,9 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	    		next = next.getNext();
 	    	}
 	    	LinkedHashMap<LabelNode, List<AbstractInsnNode>> firstFlow = new FlowAnalyzer(method).analyze(
-	    		method.instructions.getFirst(), Arrays.asList(end));
+	    		method.instructions.getFirst(), Arrays.asList(end), new HashMap<>(), false, true);
 	    	LinkedHashMap<LabelNode, List<AbstractInsnNode>> endFlow = new FlowAnalyzer(method).analyze(
-	    		end, Arrays.asList());
+	    		end, Arrays.asList(), new HashMap<>(), false, true);
 	    	for(Entry<LabelNode, List<AbstractInsnNode>> entry : firstFlow.entrySet())
 	    		for(AbstractInsnNode ain : entry.getValue())
 	    			if((ain.getOpcode() == Opcodes.IINC && ((IincInsnNode)ain).var == var)
