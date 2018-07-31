@@ -140,7 +140,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         return insnCount.get(Opcodes.IXOR).get() >= 4 &&
                insnCount.get(Opcodes.ISHL).get() >= 1 &&
                insnCount.get(Opcodes.NEWARRAY).get() >= 1 &&
-               invokeCount.get("charAt").get()>= 2 &&
+               invokeCount.get("charAt").get() >= 2 &&
                invokeCount.get("length").get() >= 1;
     }
 
