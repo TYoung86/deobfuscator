@@ -127,13 +127,10 @@ public class ConstantPropagatingSourceFinder extends SourceFinderConsumer {
                 }
                 throw new RuntimeException(String.valueOf(getStackOffset(sourceFrame, want)));
             }
-            case DUP: {
-            	instructions.add(now);
-                return SourceFinder.findSource(methodNode, frames, instructions, this, now, curFrame.getStack(curFrame.getStackSize() - 1));
-            }
+            case DUP:
             case DUP_X1: {
             	instructions.add(now);
-            	return SourceFinder.findSource(methodNode, frames, instructions, this, now, curFrame.getStack(curFrame.getStackSize() - 2));
+                return SourceFinder.findSource(methodNode, frames, instructions, this, now, curFrame.getStack(curFrame.getStackSize() - 1));
             }
         }
 
