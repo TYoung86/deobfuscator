@@ -709,6 +709,7 @@ public class JVMMethodProvider extends MethodProvider {
         }});
         put("java/util/Base64$Decoder", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
         	put("decode(Ljava/lang/String;)[B", (targetObject, args, context) -> targetObject.as(Base64.Decoder.class).decode(args.get(0).as(String.class)));
+        	put("decode([B)[B", (targetObject, args, context) -> targetObject.as(Base64.Decoder.class).decode(args.get(0).as(byte[].class)));
         }});
 
         // Javax
