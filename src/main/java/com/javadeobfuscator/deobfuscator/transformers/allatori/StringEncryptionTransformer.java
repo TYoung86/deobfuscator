@@ -137,7 +137,7 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
     		insnCount.get(Opcodes.NEWARRAY) == null ||
     		invokeCount.get("charAt") == null || invokeCount.get("length") == null)
     			return false;
-        return insnCount.get(Opcodes.IXOR).get() >= 4 &&
+        return insnCount.get(Opcodes.IXOR).get() >= 3 &&
                insnCount.get(Opcodes.ISHL).get() >= 1 &&
                insnCount.get(Opcodes.NEWARRAY).get() >= 1 &&
                invokeCount.get("charAt").get() >= 2 &&
