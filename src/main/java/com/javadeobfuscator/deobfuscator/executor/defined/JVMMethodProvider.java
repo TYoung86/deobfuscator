@@ -30,6 +30,8 @@ import java.security.Key;
 import java.security.MessageDigest;
 import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
+import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.KeySpec;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.zip.Inflater;
@@ -53,6 +55,9 @@ import com.javadeobfuscator.deobfuscator.executor.Context;
 import com.javadeobfuscator.deobfuscator.executor.providers.MethodProvider;
 import org.objectweb.asm.Type;
 import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.DESKeySpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
@@ -729,13 +734,35 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
         }});
+        put("javax/crypto/spec/DESKeySpec", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("<init>([B)V", (targetObject, args, context) -> {
+                expect(targetObject, "javax/crypto/spec/DESKeySpec");
+                targetObject.initialize(new DESKeySpec(args.get(0).as(byte[].class)));
+                return null;
+            });
+        }});
+        put("javax/crypto/spec/IvParameterSpec", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("<init>([B)V", (targetObject, args, context) -> {
+                expect(targetObject, "javax/crypto/spec/IvParameterSpec");
+                targetObject.initialize(new IvParameterSpec(args.get(0).as(byte[].class)));
+                return null;
+            });
+        }});
         put("javax/crypto/Cipher", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
         	put("getInstance(Ljava/lang/String;)Ljavax/crypto/Cipher;", (targetObject, args, context) -> Cipher.getInstance(args.get(0).as(String.class)));
         	put("init(ILjava/security/Key;)V", (targetObject, args, context) -> {
         		targetObject.as(Cipher.class).init(args.get(0).intValue(), args.get(1).as(Key.class));
         		return null;
         	});
+        	put("init(ILjava/security/Key;Ljava/security/spec/AlgorithmParameterSpec;)V", (targetObject, args, context) -> {
+        		targetObject.as(Cipher.class).init(args.get(0).intValue(), args.get(1).as(Key.class), args.get(2).as(AlgorithmParameterSpec.class));
+        		return null;
+        	});
         	put("doFinal([B)[B", (targetObject, args, context) -> targetObject.as(Cipher.class).doFinal(args.get(0).as(byte[].class)));
+        }});
+        put("javax/crypto/SecretKeyFactory", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
+        	put("getInstance(Ljava/lang/String;)Ljavax/crypto/SecretKeyFactory;", (targetObject, args, context) -> SecretKeyFactory.getInstance(args.get(0).as(String.class)));
+        	put("generateSecret(Ljava/security/spec/KeySpec;)Ljavax/crypto/SecretKey;", (targetObject, args, context) -> targetObject.as(SecretKeyFactory.class).generateSecret(args.get(0).as(KeySpec.class)));
         }});
 
         // Sun
