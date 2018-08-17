@@ -565,6 +565,7 @@ public class JVMMethodProvider extends MethodProvider {
                 return null;
             });
             put("currentThread()Ljava/lang/Thread;", (targetObject, args, context) -> ThreadStore.retrieveThread(Thread.currentThread().getId()));
+            put("getId()J", (targetObject, args, context) -> targetObject.as(JavaThread.class).getThread().getId());
             put("getStackTrace()[Ljava/lang/StackTraceElement;", (targetObject, args, context) -> {
                 context.push("java.lang.Thread", "getStackTrace", 0);
                 StackTraceElement[] elems = context.getStackTrace();
