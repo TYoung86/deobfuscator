@@ -68,6 +68,41 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        					|| Utils.getNext(ain).getOpcode() == Opcodes.ASTORE
 	        					|| Utils.getNext(ain).getOpcode() == Opcodes.FSTORE))
 	        				{
+	        					if(ain.getNext() instanceof LabelNode)
+	        					{
+	        						boolean used = false;
+		    						loop:
+		    						for(AbstractInsnNode ain1 : method.instructions.toArray())
+		    							if(ain1 instanceof JumpInsnNode && ain1 != ain
+		    							&& ((JumpInsnNode)ain1).label == ain.getNext())
+		    							{
+		    								used = true;
+		    								break loop;
+		    							}else if(ain1 instanceof TableSwitchInsnNode 
+		    								&& (((TableSwitchInsnNode)ain1).labels.contains(ain.getNext())
+		    								|| ((TableSwitchInsnNode)ain1).dflt == ain.getNext()))
+		    							{
+		    								used = true;
+		    								break loop;
+		    							}else if(ain1 instanceof LookupSwitchInsnNode 
+		    								&& (((LookupSwitchInsnNode)ain1).labels.contains(ain.getNext())
+		    								|| ((LookupSwitchInsnNode)ain1).dflt == ain.getNext()))
+		    							{
+		    								used = true;
+		    								break loop;
+		    							}
+	        						if(!used)
+		    							loop:
+		    							for(TryCatchBlockNode tcbn : method.tryCatchBlocks)
+		    								if(tcbn.start == ain.getNext() || tcbn.end == ain.getNext() 
+		    								|| tcbn.handler == ain.getNext())
+		    								{
+		    									used = true;
+		    									break loop;
+		    								}
+	        						if(used)
+	        							continue;
+	        					}
 	        					AbstractInsnNode label = null;
 	        					boolean isGoto = false;
 	        					AbstractInsnNode store = Utils.getNext(ain);
@@ -175,6 +210,41 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        					&& (Utils.getNext(ain).getOpcode() == Opcodes.DSTORE
 	        					|| Utils.getNext(ain).getOpcode() == Opcodes.LSTORE))
 	        				{
+	        					if(ain.getNext() instanceof LabelNode)
+	        					{
+	        						boolean used = false;
+		    						loop:
+		    						for(AbstractInsnNode ain1 : method.instructions.toArray())
+		    							if(ain1 instanceof JumpInsnNode && ain1 != ain
+		    							&& ((JumpInsnNode)ain1).label == ain.getNext())
+		    							{
+		    								used = true;
+		    								break loop;
+		    							}else if(ain1 instanceof TableSwitchInsnNode 
+		    								&& (((TableSwitchInsnNode)ain1).labels.contains(ain.getNext())
+		    								|| ((TableSwitchInsnNode)ain1).dflt == ain.getNext()))
+		    							{
+		    								used = true;
+		    								break loop;
+		    							}else if(ain1 instanceof LookupSwitchInsnNode 
+		    								&& (((LookupSwitchInsnNode)ain1).labels.contains(ain.getNext())
+		    								|| ((LookupSwitchInsnNode)ain1).dflt == ain.getNext()))
+		    							{
+		    								used = true;
+		    								break loop;
+		    							}
+	        						if(!used)
+		    							loop:
+		    							for(TryCatchBlockNode tcbn : method.tryCatchBlocks)
+		    								if(tcbn.start == ain.getNext() || tcbn.end == ain.getNext() 
+		    								|| tcbn.handler == ain.getNext())
+		    								{
+		    									used = true;
+		    									break loop;
+		    								}
+	        						if(used)
+	        							continue;
+	        					}
 	        					AbstractInsnNode label = null;
 	        					boolean isGoto = false;
 	        					AbstractInsnNode store = Utils.getNext(ain);
