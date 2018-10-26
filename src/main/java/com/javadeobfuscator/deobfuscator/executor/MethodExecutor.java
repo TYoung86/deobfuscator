@@ -227,6 +227,9 @@ public class MethodExecutor {
             case "JavaInteger":
                 val = value.intValue();
                 break;
+            case "JavaBoolean":
+                val = value.booleanValue();
+                break;
             case "JavaLong":
                 val = value.longValue();
                 break;
