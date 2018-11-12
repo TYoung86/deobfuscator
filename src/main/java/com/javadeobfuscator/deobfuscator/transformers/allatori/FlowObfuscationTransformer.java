@@ -381,7 +381,13 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        					{
 	        						LabelNode label = ((JumpInsnNode)ain.getNext()).label;
 	        						boolean used = false;
-	        						if(Utils.getPrevious(label) == null || Utils.getPrevious(label).getOpcode() != Opcodes.GOTO)
+	        						if(Utils.getPrevious(label) == null 
+	        							|| (Utils.getPrevious(label).getOpcode() != Opcodes.GOTO
+	        							&& !(Utils.getPrevious(label).getOpcode() >= Opcodes.IRETURN 
+	        							&& Utils.getPrevious(label).getOpcode() <= Opcodes.RETURN)
+	        							&& Utils.getPrevious(label).getOpcode() != Opcodes.TABLESWITCH 
+	        							&& Utils.getPrevious(label).getOpcode() != Opcodes.LOOKUPSWITCH
+	        							&& Utils.getPrevious(label).getOpcode() != Opcodes.ATHROW))
 	        							used = true;
 	        						for(AbstractInsnNode a : method.instructions.toArray())
 	        							if(a != ain.getNext() && a instanceof JumpInsnNode && ((JumpInsnNode)a).label == label)
@@ -393,7 +399,45 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        						{
 	        							while(!(label.getNext() instanceof LabelNode))
 	        								method.instructions.remove(label.getNext());
-	        							method.instructions.remove(label);
+	        							boolean labelUsed = false;
+        					        	for(AbstractInsnNode a : method.instructions.toArray())
+	    									if(a instanceof JumpInsnNode && ((JumpInsnNode)a).label == label)
+	    									{
+	    										labelUsed = true;
+	    										break;
+	    									}else if(a instanceof TableSwitchInsnNode)
+	    									{
+	    										for(LabelNode l : ((TableSwitchInsnNode)a).labels)
+	    											if(l == label)
+	    											{
+	    												labelUsed = true;
+	    												break;
+	    											}
+	    										if(((TableSwitchInsnNode)a).dflt == label)
+	    											labelUsed = true;
+	    										if(labelUsed)
+	    											break;
+	    									}else if(a instanceof LookupSwitchInsnNode)
+	    									{
+	    										for(LabelNode l : ((LookupSwitchInsnNode)a).labels)
+	    											if(l == label)
+	    											{
+	    												labelUsed = true;
+	    												break;
+	    											}
+	    										if(((LookupSwitchInsnNode)a).dflt == label)
+	    											labelUsed = true;
+	    										if(labelUsed)
+	    											break;
+	    									}
+	    								for(TryCatchBlockNode trycatch : method.tryCatchBlocks)
+	    									if(trycatch.start == label || trycatch.end == label || trycatch.handler == label)
+	    									{
+	    										labelUsed = true;
+	    										break;
+	    									}
+	    								if(!labelUsed)
+	    									method.instructions.remove(label);
 	        						}
         							AbstractInsnNode prev = ain.getPrevious();
         					        while(!Utils.isInstruction(prev) && !(prev instanceof LabelNode))
