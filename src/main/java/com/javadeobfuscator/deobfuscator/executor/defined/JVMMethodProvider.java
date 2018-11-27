@@ -195,6 +195,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("asList([Ljava/lang/Object;)Ljava/util/List;", (targetObject, args, context) -> Arrays.asList(args.get(0).as(Object[].class)));
             put("toString([Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> Arrays.toString(args.get(0).as(Object[].class)));
             put("copyOf([BI)[B", (targetObject, args, context) -> Arrays.copyOf(args.get(0).as(byte[].class), args.get(1).intValue()));
+            put("equals([Ljava/lang/Object;[Ljava/lang/Object;)Z", (targetObject, args, context) -> Arrays.equals(args.get(0).as(Object[].class), args.get(1).as(Object[].class)));
         }});
         put("java/util/ArrayList", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>()V", (targetObject, args, context) -> {
@@ -651,6 +652,7 @@ public class JVMMethodProvider extends MethodProvider {
             });
             put("put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(HashMap.class).put(args.get(0), args.get(1)));
             put("get(Ljava/lang/Object;)Ljava/lang/Object;", (targetObject, args, context) -> targetObject.as(HashMap.class).get(args.get(0).value()));
+            put("containsKey(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.as(HashMap.class).containsKey(args.get(0).value()));
             put("isEmpty()Z", (targetObject, args, context) -> targetObject.as(HashMap.class).isEmpty()); 
         }});
         put("java/util/HashSet", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
