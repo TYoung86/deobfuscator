@@ -52,7 +52,19 @@ public class FlowAnalyzer
 				for(TryCatchBlockNode tcbn : method.tryCatchBlocks)
 				{
 					if(tcbn.start == currentLabel)
-						trycatchNow.add(tcbn);
+					{
+						TryCatchBlockNode insertBefore = null;
+						for(TryCatchBlockNode tcbn2 : trycatchNow)
+							if(method.tryCatchBlocks.indexOf(tcbn2) > method.tryCatchBlocks.indexOf(tcbn))
+							{
+								insertBefore = tcbn2;
+								break;
+							}
+						if(insertBefore == null)
+							trycatchNow.add(tcbn);
+						else
+							trycatchNow.add(trycatchNow.indexOf(insertBefore), tcbn);
+					}
 					if(tcbn.end == currentLabel)
 						trycatchNow.remove(tcbn);
 				}
@@ -134,8 +146,20 @@ public class FlowAnalyzer
 				//Note: Empty try-catches are not added
 				for(TryCatchBlockNode tc : method.tryCatchBlocks)
 				{
-					if(tc.start == lbl)
-						trycatchNow.add(tc);
+					if(tc.start == currentLabel)
+					{
+						TryCatchBlockNode insertBefore = null;
+						for(TryCatchBlockNode tcbn2 : trycatchNow)
+							if(method.tryCatchBlocks.indexOf(tcbn2) > method.tryCatchBlocks.indexOf(tc))
+							{
+								insertBefore = tcbn2;
+								break;
+							}
+						if(insertBefore == null)
+							trycatchNow.add(tc);
+						else
+							trycatchNow.add(trycatchNow.indexOf(insertBefore), tc);
+					}
 					if(tc.end == lbl)
 						trycatchNow.remove(tc);
 				}
