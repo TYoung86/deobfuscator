@@ -270,6 +270,7 @@ public class JVMMethodProvider extends MethodProvider {
             put("replaceAll(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).replaceAll(args.get(0).as(String.class), args.get(1).as(String.class)));
             put("getBytes(Ljava/lang/String;)[B", (targetObject, args, context) -> targetObject.as(String.class).getBytes(args.get(0).as(String.class)));
             put("valueOf([CII)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).as(char[].class), args.get(1).intValue(), args.get(2).intValue()));
+            put("replace(CC)Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).replace(args.get(0).as(char.class), args.get(1).as(char.class)));
         }});
         put("java/lang/StringBuilder", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("<init>()V", (targetObject, args, context) -> {
@@ -387,6 +388,8 @@ public class JVMMethodProvider extends MethodProvider {
             put("getInterfaces()[Ljava/lang/Class;", (targetObject, args, context) -> targetObject.as(JavaClass.class).getInterfaces());
             put("getProtectionDomain()Ljava/security/ProtectionDomain;", (targetObject, args, context) -> new ProtectionDomain(new CodeSource(context.file.toURI().toURL(), new Certificate[0]), null));
             put("isInterface()Z", (targetObject, args, context) -> targetObject.as(JavaClass.class).isInterface());
+            put("isArray()Z", (targetObject, args, context) -> targetObject.as(JavaClass.class).getType().getSort() == Type.ARRAY);
+            put("equals(Ljava/lang/Object;)Z", (targetObject, args, context) -> targetObject.as(JavaClass.class).equals(args.get(0).as(JavaClass.class)));
         }});
         put("java/security/ProtectionDomain", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("getCodeSource()Ljava/security/CodeSource;", (targetObject, args, context) -> targetObject.as(ProtectionDomain.class).getCodeSource());
@@ -517,7 +520,46 @@ public class JVMMethodProvider extends MethodProvider {
             		types[i] = arguments[i].getType();
             	return Type.getMethodDescriptor(args.get(0).as(JavaClass.class).getType(), types);
             });
-            put("parameterCount()I", (targetObject, args, context) -> 0);
+            put("methodType(Ljava/lang/Class;Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;", (targetObject, args, context) -> {
+            	JavaClass[] array = new JavaClass[args.get(2).as(Object[].class).length + 1];
+            	array[0] = args.get(1).as(JavaClass.class);
+            	System.arraycopy(toJavaClass(args.get(2).as(Object[].class)), 0, array, 1, args.get(2).as(Object[].class).length);
+            	Type[] types = new Type[array.length];
+            	for(int i = 0; i < array.length; i++)
+            		types[i] = array[i].getType();
+            	return Type.getMethodDescriptor(args.get(0).as(JavaClass.class).getType(), types);
+            });
+            put("parameterCount()I", (targetObject, args, context) -> {
+            	Type[] type = Type.getArgumentTypes(targetObject.as(String.class));
+            	return type.length;
+            });
+            put("dropParameterTypes(II)Ljava/lang/invoke/MethodType;", (targetObject, args, context) -> {
+            	Type[] type = Type.getArgumentTypes(targetObject.as(String.class));
+            	int start = args.get(0).intValue();
+            	int end = args.get(1).intValue();
+            	int len = type.length;
+            	if(!(0 <= start && start <= end && end <= len))
+            		throw new IndexOutOfBoundsException("start=" + start +" end=" + end);
+            	Type[] copy;
+            	if(start == 0)
+            	{
+            		if(end == len)
+            			copy = new Type[0];
+            		else
+            			copy = Arrays.copyOfRange(type, end, len);
+            	 }else
+            	 {
+            		 if(end == len)
+            			 copy = Arrays.copyOfRange(type, 0, start);
+            		 else 
+            		 {
+            			 int tail = len - end;
+            			 copy = Arrays.copyOfRange(type, 0, start + tail);
+            			 System.arraycopy(type, end, copy, start, tail);
+            		 }
+            	 }
+            	return Type.getMethodDescriptor(Type.getReturnType(targetObject.as(String.class)), copy);
+            });
         }});
         put("java/lang/invoke/MethodHandles$Lookup", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
             put("findStatic(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;", (targetObject, args, context) -> new JavaMethodHandle(args.get(0).as(JavaClass.class).getType().getInternalName(), args.get(1).as(String.class), args.get(2).as(String.class), "static"));
@@ -600,7 +642,9 @@ public class JVMMethodProvider extends MethodProvider {
             put("parseLong(Ljava/lang/String;)J", (targetObject, args, context) -> Long.parseLong(args.get(0).as(String.class)));
             put("parseLong(Ljava/lang/String;I)J", (targetObject, args, context) -> Long.parseLong(args.get(0).as(String.class), args.get(1).intValue()));
             put("valueOf(J)Ljava/lang/Long;", (targetObject, args, context) -> Long.valueOf(args.get(0).longValue()));
+            put("valueOf(Ljava/lang/String;)Ljava/lang/Long;", (targetObject, args, context) -> Long.valueOf(args.get(0).as(String.class)));
             put("longValue()J", (targetObject, args, context) -> ((Long)targetObject.value()).longValue());
+            put("intValue()I", (targetObject, args, context) -> ((Long)targetObject.value()).intValue());
         }});
         put("java/lang/Integer", new HashMap<String, Function3<JavaValue, List<JavaValue>, Context, Object>>() {{
         	put("<init>(I)V", (targetObject, args, context) -> {
