@@ -18,7 +18,6 @@ package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
-import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 
@@ -31,6 +30,21 @@ public class FieldNormalizer extends AbstractNormalizer<FieldNormalizer.Config> 
     @Override
     public void remap(CustomRemapper remapper) {
         AtomicInteger id = new AtomicInteger(0);
+        //We must load the entire class tree so subclasses are correctly counted
+        classNodes().forEach(classNode -> {
+            ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
+            Set<String> tried = new HashSet<>();
+            LinkedList<String> toTry = new LinkedList<>();
+            toTry.add(tree.thisClass);
+            while (!toTry.isEmpty()) {
+                String t = toTry.poll();
+                if (tried.add(t) && !t.equals("java/lang/Object")) {
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
+                    toTry.addAll(ct.parentClasses);
+                    toTry.addAll(ct.subClasses);
+                }
+            }
+        });
         classNodes().forEach(classNode -> {
             ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
             Set<String> allClasses = new HashSet<>();
