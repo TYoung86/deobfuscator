@@ -33,6 +33,21 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
     public void remap(CustomRemapper remapper) {
 
         AtomicInteger id = new AtomicInteger(0);
+        //We must load the entire class tree so subclasses are correctly counted
+        classNodes().forEach(classNode -> {
+            ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
+            Set<String> tried = new HashSet<>();
+            LinkedList<String> toTry = new LinkedList<>();
+            toTry.add(tree.thisClass);
+            while (!toTry.isEmpty()) {
+                String t = toTry.poll();
+                if (tried.add(t) && !t.equals("java/lang/Object")) {
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
+                    toTry.addAll(ct.parentClasses);
+                    toTry.addAll(ct.subClasses);
+                }
+            }
+        });
         classNodes().forEach(classNode -> {
             Set<String> allClasses = new HashSet<>();
             ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
@@ -42,7 +57,6 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
             while (!toTry.isEmpty()) {
                 String t = toTry.poll();
                 if (tried.add(t) && !t.equals("java/lang/Object")) {
-                    ClassNode cn = this.getDeobfuscator().assureLoaded(t);
                     ClassTree ct = this.getDeobfuscator().getClassTree(t);
                     allClasses.add(t);
                     allClasses.addAll(ct.parentClasses);
