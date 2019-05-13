@@ -18,6 +18,8 @@ package com.javadeobfuscator.deobfuscator.transformers.normalizer;
 
 import com.javadeobfuscator.deobfuscator.config.TransformerConfig;
 import com.javadeobfuscator.deobfuscator.utils.ClassTree;
+
+import org.assertj.core.internal.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 
@@ -26,6 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @TransformerConfig.ConfigOptions(configClass = FieldNormalizer.Config.class)
 public class FieldNormalizer extends AbstractNormalizer<FieldNormalizer.Config> {
+
+	public static boolean EXCLUDE_ENUMS = true;
 
     @Override
     public void remap(CustomRemapper remapper) {
@@ -63,6 +67,10 @@ public class FieldNormalizer extends AbstractNormalizer<FieldNormalizer.Config> 
                 }
             }
             for (FieldNode fieldNode : classNode.fields) {
+            	if(EXCLUDE_ENUMS && classNode.superName.equals("java/lang/Enum")
+            		&& Type.getType(fieldNode.desc).getSort() == Type.OBJECT
+            		&& Type.getType(fieldNode.desc).getInternalName().equals(classNode.name))
+            		continue;
                 List<String> references = new ArrayList<>();
                 for (String possibleClass : allClasses) {
                     ClassNode otherNode = this.getDeobfuscator().assureLoaded(possibleClass);
