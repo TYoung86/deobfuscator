@@ -53,17 +53,26 @@ public class FieldNormalizer extends AbstractNormalizer<FieldNormalizer.Config> 
             ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
             Set<String> allClasses = new HashSet<>();
             Set<String> tried = new HashSet<>();
-            LinkedList<String> toTry = new LinkedList<>();
-            toTry.add(tree.thisClass);
-            while (!toTry.isEmpty()) {
-                String t = toTry.poll();
+            LinkedList<String> toTryParent = new LinkedList<>();
+            LinkedList<String> toTryChild = new LinkedList<>();
+            toTryParent.addAll(tree.parentClasses);
+            toTryChild.addAll(tree.subClasses);
+            while (!toTryParent.isEmpty()) {
+                String t = toTryParent.poll();
                 if (tried.add(t) && !t.equals("java/lang/Object")) {
                     ClassTree ct = this.getDeobfuscator().getClassTree(t);
                     allClasses.add(t);
                     allClasses.addAll(ct.parentClasses);
+                    toTryParent.addAll(ct.parentClasses);
+                }
+            }
+            while (!toTryChild.isEmpty()) {
+                String t = toTryChild.poll();
+                if (tried.add(t) && !t.equals("java/lang/Object")) {
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
+                    allClasses.add(t);
                     allClasses.addAll(ct.subClasses);
-                    toTry.addAll(ct.parentClasses);
-                    toTry.addAll(ct.subClasses);
+                    toTryChild.addAll(ct.subClasses);
                 }
             }
             for (FieldNode fieldNode : classNode.fields) {
