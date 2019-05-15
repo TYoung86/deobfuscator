@@ -65,6 +65,28 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
                     toTry.addAll(ct.subClasses);
                 }
             }
+            LinkedList<String> toTryParent = new LinkedList<>();
+            LinkedList<String> toTryChild = new LinkedList<>();
+            toTryParent.addAll(tree.parentClasses);
+            toTryChild.addAll(tree.subClasses);
+            while (!toTryParent.isEmpty()) {
+                String t = toTryParent.poll();
+                if (tried.add(t) && !t.equals("java/lang/Object")) {
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
+                    allClasses.add(t);
+                    allClasses.addAll(ct.parentClasses);
+                    toTryParent.addAll(ct.parentClasses);
+                }
+            }
+            while (!toTryChild.isEmpty()) {
+                String t = toTryChild.poll();
+                if (tried.add(t) && !t.equals("java/lang/Object")) {
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
+                    allClasses.add(t);
+                    allClasses.addAll(ct.subClasses);
+                    toTryChild.addAll(ct.subClasses);
+                }
+            }
             allClasses.remove(tree.thisClass);
 
             for (MethodNode methodNode : new ArrayList<>(classNode.methods)) {
@@ -94,10 +116,8 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
                                 }
                             }
                         }
-                        if (foundSimilar) {
-                            if (equals) {
-                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                            }
+                        if (foundSimilar && equals) {
+                        	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
                         } else {
                             allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
                         }
@@ -114,22 +134,22 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
                                 Type thisType = Type.getMethodType(methodNode.desc);
                                 Type otherType = Type.getMethodType(method.desc);
                                 if (methodNode.name.equals(method.name) && Arrays.equals(thisType.getArgumentTypes(), otherType.getArgumentTypes())) {
-                                    if (otherType.getReturnType().getSort() == Type.OBJECT) {
+                                    if (otherType.getReturnType().getSort() == Type.ARRAY && otherType.getReturnType().getElementType().getSort() == Type.OBJECT) {
                                         foundSimilar = true;
-                                        String child = otherType.getReturnType().getInternalName();
+                                        String child = otherType.getReturnType().getElementType().getInternalName();
                                         this.getDeobfuscator().assureLoaded(parent);
                                         this.getDeobfuscator().assureLoaded(child);
-                                        if (this.getDeobfuscator().isSubclass(parent, child) || this.getDeobfuscator().isSubclass(child, parent)) {
+                                        if ((toTryChild.contains(node.name) && this.getDeobfuscator().isSubclass(parent, child))
+                                        	|| (toTryParent.contains(node.name) && this.getDeobfuscator().isSubclass(child, parent))
+                                        	|| child.equals(parent)) {
                                             equals = true;
                                             equalsMethod = method;
                                         }
                                     }
                                 }
                             }
-                            if (foundSimilar) {
-                                if (equals) {
-                                    allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                                }
+                            if (foundSimilar && equals) {
+                            	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
                             } else {
                                 allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
                             }
@@ -150,10 +170,8 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
                                     }
                                 }
                             }
-                            if (foundSimilar) {
-                                if (equals) {
-                                    allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                                }
+                            if (foundSimilar && equals) {
+                            	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
                             } else {
                                 allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
                             }
@@ -174,19 +192,17 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
                                     String child = otherType.getReturnType().getInternalName();
                                     this.getDeobfuscator().assureLoaded(parent);
                                     this.getDeobfuscator().assureLoaded(child);
-                                    if (this.getDeobfuscator().isSubclass(parent, child) || this.getDeobfuscator().isSubclass(child, parent)) {
+                                    if ((toTryChild.contains(node.name) && this.getDeobfuscator().isSubclass(parent, child))
+                                    	|| (toTryParent.contains(node.name) && this.getDeobfuscator().isSubclass(child, parent))
+                                    	|| child.equals(parent)) {
                                         equals = true;
                                         equalsMethod = method;
                                     }
                                 }
                             }
                         }
-                        if (foundSimilar) {
-                            if (equals) {
-                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                            } else {
-                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
-                            }
+                        if (foundSimilar && equals) {
+                        	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
                         } else {
                             allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
                         }
