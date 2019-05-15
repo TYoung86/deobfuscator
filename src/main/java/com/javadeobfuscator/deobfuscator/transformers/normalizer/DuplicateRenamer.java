@@ -61,6 +61,21 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
 	@Override
 	public void remap(CustomRemapper remapper)
 	{
+		//We must load the entire class tree so subclasses are correctly counted
+        classNodes().forEach(classNode -> {
+            ClassTree tree = this.getDeobfuscator().getClassTree(classNode.name);
+            Set<String> tried = new HashSet<>();
+            LinkedList<String> toTry = new LinkedList<>();
+            toTry.add(tree.thisClass);
+            while (!toTry.isEmpty()) {
+                String t = toTry.poll();
+                if (tried.add(t) && !t.equals("java/lang/Object")) {
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
+                    toTry.addAll(ct.parentClasses);
+                    toTry.addAll(ct.subClasses);
+                }
+            }
+        });
 		// Aggressive class name obfuscation
 		Map<String, AtomicInteger> names = new HashMap<>();
 		classNodes().forEach(classNode -> {
@@ -120,13 +135,34 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
             while (!toTry.isEmpty()) {
                 String t = toTry.poll();
                 if (tried.add(t) && !t.equals("java/lang/Object")) {
-                    ClassNode cn = this.getDeobfuscator().assureLoaded(t);
                     ClassTree ct = this.getDeobfuscator().getClassTree(t);
                     allClasses.add(t);
                     allClasses.addAll(ct.parentClasses);
                     toTry.addAll(ct.parentClasses);
                     allClasses.addAll(ct.subClasses);
                     toTry.addAll(ct.subClasses);
+                }
+            }
+            LinkedList<String> toTryParent = new LinkedList<>();
+            LinkedList<String> toTryChild = new LinkedList<>();
+            toTryParent.addAll(tree.parentClasses);
+            toTryChild.addAll(tree.subClasses);
+            while (!toTryParent.isEmpty()) {
+                String t = toTryParent.poll();
+                if (tried.add(t) && !t.equals("java/lang/Object")) {
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
+                    allClasses.add(t);
+                    allClasses.addAll(ct.parentClasses);
+                    toTryParent.addAll(ct.parentClasses);
+                }
+            }
+            while (!toTryChild.isEmpty()) {
+                String t = toTryChild.poll();
+                if (tried.add(t) && !t.equals("java/lang/Object")) {
+                    ClassTree ct = this.getDeobfuscator().getClassTree(t);
+                    allClasses.add(t);
+                    allClasses.addAll(ct.subClasses);
+                    toTryChild.addAll(ct.subClasses);
                 }
             }
             allClasses.remove(tree.thisClass);
@@ -158,10 +194,8 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
                                 }
                             }
                         }
-                        if (foundSimilar) {
-                            if (equals) {
-                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                            }
+                        if (foundSimilar && equals) {
+                        	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
                         } else {
                             allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
                         }
@@ -178,22 +212,22 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
                                 Type thisType = Type.getMethodType(methodNode.desc);
                                 Type otherType = Type.getMethodType(method.desc);
                                 if (methodNode.name.equals(method.name) && Arrays.equals(thisType.getArgumentTypes(), otherType.getArgumentTypes())) {
-                                    if (otherType.getReturnType().getSort() == Type.OBJECT) {
+                                	if (otherType.getReturnType().getSort() == Type.ARRAY && otherType.getReturnType().getElementType().getSort() == Type.OBJECT) {
                                         foundSimilar = true;
                                         String child = otherType.getReturnType().getInternalName();
                                         this.getDeobfuscator().assureLoaded(parent);
                                         this.getDeobfuscator().assureLoaded(child);
-                                        if (this.getDeobfuscator().isSubclass(parent, child) || this.getDeobfuscator().isSubclass(child, parent)) {
+                                        if ((toTryChild.contains(node.name) && this.getDeobfuscator().isSubclass(parent, child))
+                                        	|| (toTryParent.contains(node.name) && this.getDeobfuscator().isSubclass(child, parent))
+                                        	|| child.equals(parent)) {
                                             equals = true;
                                             equalsMethod = method;
                                         }
                                     }
                                 }
                             }
-                            if (foundSimilar) {
-                                if (equals) {
-                                    allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                                }
+                            if (foundSimilar && equals) {
+                            	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
                             } else {
                                 allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
                             }
@@ -214,10 +248,8 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
                                     }
                                 }
                             }
-                            if (foundSimilar) {
-                                if (equals) {
-                                    allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                                }
+                            if (foundSimilar && equals) {
+                            	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
                             } else {
                                 allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
                             }
@@ -238,19 +270,17 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
                                     String child = otherType.getReturnType().getInternalName();
                                     this.getDeobfuscator().assureLoaded(parent);
                                     this.getDeobfuscator().assureLoaded(child);
-                                    if (this.getDeobfuscator().isSubclass(parent, child) || this.getDeobfuscator().isSubclass(child, parent)) {
+                                    if ((toTryChild.contains(node.name) && this.getDeobfuscator().isSubclass(parent, child))
+                                    	|| (toTryParent.contains(node.name) && this.getDeobfuscator().isSubclass(child, parent))
+                                    	|| child.equals(parent)) {
                                         equals = true;
                                         equalsMethod = method;
                                     }
                                 }
                             }
                         }
-                        if (foundSimilar) {
-                            if (equals) {
-                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                            } else {
-                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
-                            }
+                        if (foundSimilar && equals) {
+                        	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
                         } else {
                             allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
                         }
