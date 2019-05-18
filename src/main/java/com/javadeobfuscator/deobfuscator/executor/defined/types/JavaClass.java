@@ -316,7 +316,7 @@ public class JavaClass {
         		{
         			boolean duplicate = false;
         			for(JavaMethod jm : methods)
-        				if(jm.getDesc().equals(methodNode.desc))
+        				if(jm.getName().equals(methodNode.name) && jm.getDesc().equals(methodNode.desc))
         				{
         					duplicate = true;
         					break;
@@ -342,7 +342,7 @@ public class JavaClass {
         	{
     			boolean duplicate = false;
     			for(JavaMethod jm : methods)
-    				if(jm.getDesc().equals(methodNode.desc))
+    				if(jm.getName().equals(methodNode.name) && jm.getDesc().equals(methodNode.desc))
     				{
     					duplicate = true;
     					break;
