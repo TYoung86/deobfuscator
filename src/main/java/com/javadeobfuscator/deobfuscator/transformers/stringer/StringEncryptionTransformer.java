@@ -32,6 +32,7 @@ import com.javadeobfuscator.deobfuscator.matcher.InvocationStep;
 import com.javadeobfuscator.deobfuscator.matcher.LoadIntStep;
 import com.javadeobfuscator.deobfuscator.matcher.OpcodeStep;
 import com.javadeobfuscator.deobfuscator.transformers.Transformer;
+import com.javadeobfuscator.deobfuscator.utils.TransformerHelper;
 import com.javadeobfuscator.deobfuscator.utils.TypeStore;
 import com.javadeobfuscator.deobfuscator.utils.Utils;
 import org.objectweb.asm.Opcodes;
@@ -120,6 +121,9 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
 	                    method = false;
 	                    break;
 	                } else if ((node.desc.equals("(Ljava/lang/Object;I)Ljava/lang/String;") || node.desc.equals("(Ljava/lang/Object;)Ljava/lang/String;")) && classNode.superName.equals("java/lang/Thread")) {
+	                    method = true;
+	                } else if (TransformerHelper.basicType(node.desc).equals("(Ljava/lang/Object;III)Ljava/lang/Object;") 
+	                	&& Type.getReturnType(node.desc).getDescriptor().equals("Ljava/lang/String;")) {
 	                    method = true;
 	                }
 	            }
