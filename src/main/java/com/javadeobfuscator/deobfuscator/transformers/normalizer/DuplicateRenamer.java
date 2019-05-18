@@ -214,7 +214,7 @@ public class DuplicateRenamer extends AbstractNormalizer<DuplicateRenamer.Config
                                 if (methodNode.name.equals(method.name) && Arrays.equals(thisType.getArgumentTypes(), otherType.getArgumentTypes())) {
                                 	if (otherType.getReturnType().getSort() == Type.ARRAY && otherType.getReturnType().getElementType().getSort() == Type.OBJECT) {
                                         foundSimilar = true;
-                                        String child = otherType.getReturnType().getInternalName();
+                                        String child = otherType.getReturnType().getElementType().getInternalName();
                                         this.getDeobfuscator().assureLoaded(parent);
                                         this.getDeobfuscator().assureLoaded(child);
                                         if ((toTryChild.contains(node.name) && this.getDeobfuscator().isSubclass(parent, child))
