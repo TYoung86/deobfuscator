@@ -253,7 +253,7 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
                             Type thisType = Type.getMethodType(methodNode.desc);
                             Type otherType = Type.getMethodType(method.desc);
                             if (methodNode.name.equals(method.name) && Arrays.equals(thisType.getArgumentTypes(), otherType.getArgumentTypes())) {
-                                if (otherType.getReturnType().getSort() == Type.OBJECT) {
+                            	if (otherType.getReturnType().getSort() == Type.OBJECT) {
                                     foundSimilar = true;
                                     String child = otherType.getReturnType().getInternalName();
                                     this.getDeobfuscator().assureLoaded(parent);
@@ -264,7 +264,8 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
                                         equals = true;
                                         equalsMethod = method;
                                     }
-                                }else if (toTryParent.contains(node.name) && otherType.getSort() == Type.ARRAY)
+                                }else if (parent.equals("java/lang/Object")
+                                	&& toTryChild.contains(node.name) && otherType.getSort() == Type.ARRAY)
                                 {
                                 	//Arrays extend object
                                 	foundSimilar = true;
