@@ -203,7 +203,9 @@ public class Deobfuscator {
                     classpath.put(node.name, node);
                 }
             } catch (IllegalArgumentException x) {
-                logger.error("Could not parse {} (is it a class file?)", name, x);
+            	logger.error("Could not parse {} (is it a class file?)", name, x);
+            } catch (ArrayIndexOutOfBoundsException x) {
+            	logger.error("Could not parse {} (is it a class file?)", name, x);
             }
         }
 
@@ -262,11 +264,11 @@ public class Deobfuscator {
                 logger.info("\t{}", message);
                 logger.info("Recommend transformers:");
 
-                Collection<Class<? extends Transformer>> recommended = rule.getRecommendTransformers();
+                Collection<Class<? extends Transformer<?>>> recommended = rule.getRecommendTransformers();
                 if (recommended == null) {
                     logger.info("\tNone");
                 } else {
-                    for (Class<? extends Transformer> transformer : recommended) {
+                    for (Class<? extends Transformer<?>> transformer : recommended) {
                         logger.info("\t{}", transformer.getName());
                     }
                 }
@@ -385,10 +387,6 @@ public class Deobfuscator {
 
     public List<ClassNode> loadHierachy(ClassNode specificNode) {
         if (specificNode.name.equals("java/lang/Object")) {
-            return Collections.emptyList();
-        }
-        if ((specificNode.access & Opcodes.ACC_INTERFACE) != 0) {
-            getOrCreateClassTree(specificNode.name).parentClasses.add("java/lang/Object");
             return Collections.emptyList();
         }
         List<ClassNode> toProcess = new ArrayList<>();
