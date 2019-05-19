@@ -124,58 +124,124 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
                     });
                 } else if (methodType.getSort() == Type.ARRAY) {
                     Type elementType = methodType.getElementType();
-                    if (elementType.getSort() == Type.OBJECT) {
-                        String parent = elementType.getInternalName();
-                        allClasses.stream().map(name -> this.getDeobfuscator().assureLoaded(name)).forEach(node -> {
-                            boolean foundSimilar = false;
-                            boolean equals = false;
-                            MethodNode equalsMethod = null;
-                            for (MethodNode method : node.methods) {
-                                Type thisType = Type.getMethodType(methodNode.desc);
-                                Type otherType = Type.getMethodType(method.desc);
-                                if (methodNode.name.equals(method.name) && Arrays.equals(thisType.getArgumentTypes(), otherType.getArgumentTypes())) {
-                                    if (otherType.getReturnType().getSort() == Type.ARRAY && otherType.getReturnType().getElementType().getSort() == Type.OBJECT) {
-                                        foundSimilar = true;
-                                        String child = otherType.getReturnType().getElementType().getInternalName();
-                                        this.getDeobfuscator().assureLoaded(parent);
-                                        this.getDeobfuscator().assureLoaded(child);
-                                        if ((toTryChild.contains(node.name) && this.getDeobfuscator().isSubclass(parent, child))
-                                        	|| (toTryParent.contains(node.name) && this.getDeobfuscator().isSubclass(child, parent))
-                                        	|| child.equals(parent)) {
-                                            equals = true;
-                                            equalsMethod = method;
-                                        }
-                                    }
-                                }
-                            }
-                            if (foundSimilar && equals) {
-                            	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                            } else {
-                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
-                            }
-                        });
-                    } else {
-                        allClasses.stream().map(name -> this.getDeobfuscator().assureLoaded(name)).forEach(node -> {
-                            boolean foundSimilar = false;
-                            boolean equals = false;
-                            MethodNode equalsMethod = null;
-                            for (MethodNode method : node.methods) {
-                                Type thisType = Type.getMethodType(methodNode.desc);
-                                Type otherType = Type.getMethodType(method.desc);
-                                if (methodNode.name.equals(method.name) && Arrays.equals(thisType.getArgumentTypes(), otherType.getArgumentTypes())) {
-                                    foundSimilar = true;
-                                    if (thisType.getReturnType().getSort() == otherType.getReturnType().getSort()) {
-                                        equals = true;
-                                        equalsMethod = method;
-                                    }
-                                }
-                            }
-                            if (foundSimilar && equals) {
-                            	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
-                            } else {
-                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
-                            }
-                        });
+                    int layers = 1;
+                    AtomicBoolean passed = new AtomicBoolean();
+                    while(true)
+                    {
+                    	if(passed.get())
+                    	{
+                    		layers++;
+                    		passed.set(false);
+                    	}
+	                    if (elementType.getSort() == Type.OBJECT) {
+	                        String parent = elementType.getInternalName();
+	                        final int layersF = layers;
+	                        allClasses.stream().map(name -> this.getDeobfuscator().assureLoaded(name)).forEach(node -> {
+	                            boolean foundSimilar = false;
+	                            boolean equals = false;
+	                            MethodNode equalsMethod = null;
+	                            for (MethodNode method : node.methods) {
+	                                Type thisType = Type.getMethodType(methodNode.desc);
+	                                Type otherType = Type.getMethodType(method.desc);
+	                                if (methodNode.name.equals(method.name) && Arrays.equals(thisType.getArgumentTypes(), otherType.getArgumentTypes())) {
+	                                	Type otherEleType = otherType.getReturnType();
+	                                	if(toTryParent.contains(node.name) && otherEleType.getSort() == Type.OBJECT
+	                                    	&& otherEleType.getInternalName().equals("java/lang/Object"))
+	                                    {
+	                                    	//Passed (superclass has Object return)
+	                                    	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
+	                                    	break;
+	                                    }
+	                                	if(otherEleType.getSort() != Type.ARRAY || otherEleType.getDimensions() < layersF)
+	                                		break;
+	                                	for(int i = 0; i < layersF; i++)
+	                                		otherEleType = otherEleType.getElementType();
+	                                    if (otherEleType.getSort() == Type.OBJECT) {
+	                                        foundSimilar = true;
+	                                        String child = otherEleType.getInternalName();
+	                                        this.getDeobfuscator().assureLoaded(parent);
+	                                        this.getDeobfuscator().assureLoaded(child);
+	                                        if ((toTryChild.contains(node.name) && this.getDeobfuscator().isSubclass(parent, child))
+	                                        	|| (toTryParent.contains(node.name) && this.getDeobfuscator().isSubclass(child, parent))
+	                                        	|| child.equals(parent)) {
+	                                            equals = true;
+	                                            equalsMethod = method;
+	                                        }
+	                                    }
+	                                }
+	                            }
+	                            if (foundSimilar && equals) {
+	                            	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
+	                            } else {
+	                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
+	                            }
+	                        });
+	                        break;
+	                    } else if (elementType.getSort() != Type.ARRAY) {
+	                    	final int layersF = layers;
+	                        allClasses.stream().map(name -> this.getDeobfuscator().assureLoaded(name)).forEach(node -> {
+	                            boolean foundSimilar = false;
+	                            boolean equals = false;
+	                            MethodNode equalsMethod = null;
+	                            for (MethodNode method : node.methods) {
+	                                Type thisType = Type.getMethodType(methodNode.desc);
+	                                Type otherType = Type.getMethodType(method.desc);
+	                                if (methodNode.name.equals(method.name) && Arrays.equals(thisType.getArgumentTypes(), otherType.getArgumentTypes())) {
+	                                    foundSimilar = true;
+	                                    Type otherEleType = otherType.getReturnType();
+	                                    if(toTryParent.contains(node.name) && otherEleType.getSort() == Type.OBJECT
+	                                    	&& otherEleType.getInternalName().equals("java/lang/Object"))
+	                                    {
+	                                    	//Passed (superclass has Object return)
+	                                    	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
+	                                    	break;
+	                                    }
+	                                	if(otherEleType.getSort() != Type.ARRAY || otherEleType.getDimensions() < layersF)
+	                                		break;
+	                                	for(int i = 0; i < layersF; i++)
+	                                		otherEleType = otherEleType.getElementType();
+	                                    if (elementType.getSort() == otherEleType.getSort()) {
+	                                        equals = true;
+	                                        equalsMethod = method;
+	                                    }
+	                                }
+	                            }
+	                            if (foundSimilar && equals) {
+	                            	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
+	                            } else {
+	                                allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, methodNode), false);
+	                            }
+	                        });
+	                        break;
+	                    } else {
+	                    	int layersF = layers;
+	                    	allClasses.stream().map(name -> this.getDeobfuscator().assureLoaded(name)).forEach(node -> {
+	                            MethodNode equalsMethod = null;
+	                            for (MethodNode method : node.methods) {
+	                                Type thisType = Type.getMethodType(methodNode.desc);
+	                                Type otherType = Type.getMethodType(method.desc);
+	                                if (methodNode.name.equals(method.name) && Arrays.equals(thisType.getArgumentTypes(), otherType.getArgumentTypes())) {
+	                                    Type otherEleType = otherType.getReturnType();
+	                                	for(int i = 0; i < layersF; i++)
+	                                		otherEleType = otherEleType.getElementType();
+	                                    if (otherEleType.getSort() == Type.ARRAY)
+	                                    {
+	                                    	//Continue checking element
+	                                    	passed.set(true);
+	                                    	continue;
+	                                    }else if(toTryParent.contains(node.name) && otherEleType.getSort() == Type.OBJECT
+	                                    	&& otherEleType.getInternalName().equals("java/lang/Object"))
+	                                    {
+	                                    	//Passed (superclass has Object return)
+	                                    	allMethodNodes.put(new AbstractMap.SimpleEntry<>(node, equalsMethod), true);
+	                                    	break;
+	                                    }else
+	                                    	//Fail
+	                                    	break;
+	                                }
+	                            }
+	                        });
+	                    }
                     }
                 } else if (methodType.getSort() == Type.OBJECT) {
                     String parent = methodType.getInternalName();
@@ -198,6 +264,12 @@ public class MethodNormalizer extends AbstractNormalizer<MethodNormalizer.Config
                                         equals = true;
                                         equalsMethod = method;
                                     }
+                                }else if (toTryParent.contains(node.name) && otherType.getSort() == Type.ARRAY)
+                                {
+                                	//Arrays extend object
+                                	foundSimilar = true;
+                                	equals = true;
+                                	equalsMethod = method;
                                 }
                             }
                         }
