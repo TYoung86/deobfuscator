@@ -22,9 +22,11 @@ import com.javadeobfuscator.deobfuscator.executor.MethodExecutor;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.JVMMethodProvider;
 import com.javadeobfuscator.deobfuscator.executor.defined.MappedMethodProvider;
+import com.javadeobfuscator.deobfuscator.executor.providers.ComparisonProvider;
 import com.javadeobfuscator.deobfuscator.executor.providers.DelegatingProvider;
 import com.javadeobfuscator.deobfuscator.executor.values.JavaValue;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -46,6 +48,37 @@ public class StringEncryptionTransformer extends Transformer<TransformerConfig> 
         provider.register(new JVMMethodProvider());
         provider.register(new JVMComparisonProvider());
         provider.register(new MappedMethodProvider(classes));
+        provider.register(new ComparisonProvider() {
+            @Override
+            public boolean instanceOf(JavaValue target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean checkcast(JavaValue target, Type type, Context context) {
+                return true;
+            }
+
+            @Override
+            public boolean checkEquality(JavaValue first, JavaValue second, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckInstanceOf(JavaValue target, Type type, Context context) {
+                return false;
+            }
+
+            @Override
+            public boolean canCheckcast(JavaValue target, Type type, Context context) {
+                return true;
+            }
+
+            @Override
+            public boolean canCheckEquality(JavaValue first, JavaValue second, Context context) {
+                return false;
+            }
+        });
 
         AtomicInteger count = new AtomicInteger();
         Set<MethodNode> decryptor = new HashSet<>();
