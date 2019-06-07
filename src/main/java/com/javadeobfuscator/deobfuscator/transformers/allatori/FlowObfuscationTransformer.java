@@ -314,7 +314,7 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        						backwards.setIgnoreNeeded(true);
 	        						backwards.setSpecialDup(true);
 	        						ArgsAnalyzer.Result result = backwards.lookupArgs();
-	        						if(result.getDiff() == -2)
+	        						if(!(result instanceof ArgsAnalyzer.FailedResult) && result.getDiff() == -2)
 	        						{
 	        							AbstractInsnNode res = result.getFirstArgInsn();
 	        							if(res.getOpcode() >= Opcodes.DUP2 && res.getOpcode() <= Opcodes.DUP2_X2)
@@ -531,6 +531,8 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
 	        	        						|| ain.getNext().getOpcode() == Opcodes.IFNULL
 	        	        						|| ain.getNext().getOpcode() == Opcodes.IFNONNULL ? 2 : 3, 
 	        	    	    						ArgsAnalyzer.Mode.BACKWARDS, Opcodes.SWAP).lookupArgs();
+	    	        					if(analysis.getFirstArgInsn().getNext() != null && analysis.getFirstArgInsn().getNext().getOpcode() == Opcodes.DUP)
+	    	        						method.instructions.set(analysis.getFirstArgInsn().getNext(), analysis.getFirstArgInsn().clone(null));
 	        							method.instructions.remove(analysis.getFirstArgInsn());
 	        						}
 	        					}
@@ -2451,4 +2453,4 @@ public class FlowObfuscationTransformer extends Transformer<TransformerConfig>
     	}
     	return false;
     }
-} 
+}
