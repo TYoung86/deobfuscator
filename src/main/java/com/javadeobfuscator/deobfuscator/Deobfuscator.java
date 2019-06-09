@@ -264,11 +264,11 @@ public class Deobfuscator {
                 logger.info("\t{}", message);
                 logger.info("Recommend transformers:");
 
-                Collection<Class<? extends Transformer<?>>> recommended = rule.getRecommendTransformers();
+                Collection<Class<? extends Transformer>> recommended = rule.getRecommendTransformers();
                 if (recommended == null) {
                     logger.info("\tNone");
                 } else {
-                    for (Class<? extends Transformer<?>> transformer : recommended) {
+                    for (Class<? extends Transformer> transformer : recommended) {
                         logger.info("\t{}", transformer.getName());
                     }
                 }
