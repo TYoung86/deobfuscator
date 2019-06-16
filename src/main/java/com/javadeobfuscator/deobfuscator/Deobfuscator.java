@@ -74,7 +74,7 @@ public class Deobfuscator {
     /**
      * Must enable for paramorphism obfuscated files.
      */
-    private static final boolean PARAMORPHISM = true;
+    private static final boolean PARAMORPHISM = false;
 
     public ConstantPool getConstantPool(ClassNode classNode) {
         return this.constantPools.get(classNode);
