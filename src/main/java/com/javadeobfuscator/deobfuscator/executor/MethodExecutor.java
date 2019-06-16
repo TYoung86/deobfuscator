@@ -177,8 +177,24 @@ public class MethodExecutor {
         		Array.set(array.value(), index.intValue(), (char)(value.longValue()));
         	else
         		Array.set(array.value(), index.intValue(), val);
+        } else if (array.value() instanceof byte[]) {
+        	//We have to unbox everything or it throws an exception
+        	if(value instanceof JavaShort)
+        		Array.set(array.value(), index.intValue(), (byte)((JavaShort)value).shortValue());
+        	else if(value instanceof JavaInteger)
+        		Array.set(array.value(), index.intValue(), (byte)value.intValue());
+        	else
+        		Array.set(array.value(), index.intValue(), val);
+        } else if (array.value() instanceof short[]) {
+        	//We have to unbox everything or it throws an exception
+        	if(value instanceof JavaByte)
+        		Array.set(array.value(), index.intValue(), (short)((JavaByte)value).byteValue());
+        	else if(value instanceof JavaInteger)
+        		Array.set(array.value(), index.intValue(), (short)value.intValue());
+        	else
+        		Array.set(array.value(), index.intValue(), val);
         } else
-    		Array.set(array.value(), index.intValue(), val);
+        	Array.set(array.value(), index.intValue(), val);
         if(value instanceof JavaObject)
         	((JavaArray)array).onValueStored(index.intValue(), value.type());
     }
