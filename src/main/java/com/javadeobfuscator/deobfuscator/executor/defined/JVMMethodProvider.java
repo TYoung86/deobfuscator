@@ -246,6 +246,7 @@ public class JVMMethodProvider extends MethodProvider {
                 targetObject.initialize(new String(args.get(0).as(byte[].class), args.get(1).as(String.class)));
                 return null;
             });
+            put("getBytes(Ljava/nio/charset/Charset;)[B", (targetObject, args, context) -> targetObject.as(String.class).getBytes(args.get(0).as(Charset.class)));
             put("toString()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).toString());
             put("intern()Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).intern());
             put("valueOf(I)Ljava/lang/String;", (targetObject, args, context) -> String.valueOf(args.get(0).intValue()));
@@ -260,7 +261,9 @@ public class JVMMethodProvider extends MethodProvider {
             put("startsWith(Ljava/lang/String;)Z", (targetObject, args, context) -> targetObject.as(String.class).startsWith(args.get(0).as(String.class)));
             put("substring(I)Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).substring(args.get(0).intValue()));
             put("substring(II)Ljava/lang/String;", (targetObject, args, context) -> targetObject.as(String.class).substring(args.get(0).intValue(), args.get(1).intValue()));
+            put("indexOf(Ljava/lang/String;)I", (targetObject, args, context) -> targetObject.as(String.class).indexOf(args.get(0).as(String.class)));
             put("indexOf(II)I", (targetObject, args, context) -> targetObject.as(String.class).indexOf(args.get(0).intValue(), args.get(1).intValue()));
+            put("lastIndexOf(Ljava/lang/String;)I", (targetObject, args, context) -> targetObject.as(String.class).lastIndexOf(args.get(0).as(String.class)));
             put("lastIndexOf(I)I", (targetObject, args, context) -> targetObject.as(String.class).lastIndexOf(args.get(0).intValue()));
             put("isEmpty()Z", (targetObject, args, context) -> targetObject.as(String.class).isEmpty());
             put("format(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;", (targetObject, args, context) -> String.format(args.get(0).as(String.class), args.get(1).as(Object[].class)));
