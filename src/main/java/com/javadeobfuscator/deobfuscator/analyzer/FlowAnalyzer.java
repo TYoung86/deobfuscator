@@ -146,7 +146,7 @@ public class FlowAnalyzer
 				//Note: Empty try-catches are not added
 				for(TryCatchBlockNode tc : method.tryCatchBlocks)
 				{
-					if(tc.start == currentLabel)
+					if(tc.start == lbl)
 					{
 						TryCatchBlockNode insertBefore = null;
 						for(TryCatchBlockNode tcbn2 : trycatchNow)
